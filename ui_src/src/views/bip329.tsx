@@ -1,11 +1,44 @@
 import { useRef, useState, useEffect, useCallback } from "react";
+import { nip44 } from "nostr-tools";
+import { hex } from "@scure/base";
 import Button from "../components/button";
 import LoginDialog from "../components/login-dialog";
 import useLogin from "../hooks/login";
 import usePublisher from "../hooks/publisher";
+import { LoginSession } from "../login";
 import { Blossom, BlobDescriptor } from "../upload/blossom";
 import { Route96, Route96File } from "../upload/admin";
 import { ServerUrl } from "../const";
+
+async function nip44Encrypt(text: string, session: LoginSession): Promise<string> {
+  console.log('nip44Encrypt', nip44Encrypt);
+  console.log('session', session);
+  if (session.type === "nsec" || session.type === "nip46") {
+    if (!session.privateKey) throw new Error("No private key available");
+    const convKey = nip44.v2.utils.getConversationKey(hex.decode(session.privateKey), session.publicKey);
+    return nip44.v2.encrypt(text, convKey);
+  }
+  if (session.type === "nip7") {
+    const nostr = (window as any).nostr;
+    if (!nostr?.nip44?.encrypt) throw new Error("NIP-07 extension does not support NIP-44");
+    return nostr.nip44.encrypt(session.publicKey, text);
+  }
+  throw new Error("Unsupported login type");
+}
+
+async function nip44Decrypt(ciphertext: string, session: LoginSession): Promise<string> {
+  if (session.type === "nsec" || session.type === "nip46") {
+    if (!session.privateKey) throw new Error("No private key available");
+    const convKey = nip44.v2.utils.getConversationKey(hex.decode(session.privateKey), session.publicKey);
+    return nip44.v2.decrypt(ciphertext, convKey);
+  }
+  if (session.type === "nip7") {
+    const nostr = (window as any).nostr;
+    if (!nostr?.nip44?.decrypt) throw new Error("NIP-07 extension does not support NIP-44");
+    return nostr.nip44.decrypt(session.publicKey, ciphertext);
+  }
+  throw new Error("Unsupported login type");
+}
 
 interface Bip329Label {
   type: string;
@@ -84,7 +117,7 @@ export default function Bip329() {
             const rsp = await fetch(url);
             if (!rsp.ok) return;
             const encrypted = await rsp.text();
-            const decrypted = await pub.nip4Decrypt(encrypted, login.publicKey);
+            const decrypted = await nip44Decrypt(encrypted, login);
             const labels = parseJsonl(decrypted);
             if (labels) {
               allLabels.push(...labels.map((label) => ({ label, fileSha256: sha256 })));
@@ -129,7 +162,7 @@ export default function Bip329() {
     setUploading(true);
     setUploadError(undefined);
     try {
-      const encrypted = await pub.nip4Encrypt(rawText, login.publicKey);
+      const encrypted = await nip44Encrypt(rawText, login);
       const blob = new Blob([encrypted], { type: "application/octet-stream" });
       const encFile = new File([blob], fileName + ".enc", { type: "application/octet-stream" });
       const uploader = new Blossom(ServerUrl, pub);
@@ -175,7 +208,7 @@ export default function Bip329() {
         if (remaining.length > 0) {
           // Re-encrypt and re-upload the file without the deleted label
           const newText = toJsonl(remaining);
-          const encrypted = await pub.nip4Encrypt(newText, login.publicKey);
+          const encrypted = await nip44Encrypt(newText, login);
           const blob = new Blob([encrypted], { type: "application/octet-stream" });
           const encFile = new File([blob], "labels.jsonl.enc", { type: "application/octet-stream" });
           await blossom.upload(encFile);
