@@ -5,10 +5,11 @@ import "./index.css";
 import { NostrSystem } from "@snort/system";
 import { SnortContext } from "@snort/system-react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Upload from "./views/upload.tsx";
-import Admin from "./views/admin.tsx";
-import UserScope from "./views/user-scope.tsx";
-import Setup from "./views/setup.tsx";
+// import Upload from "./views/upload.tsx";
+// import Admin from "./views/admin.tsx";
+// import UserScope from "./views/user-scope.tsx";
+// import Setup from "./views/setup.tsx";
+import Bip329 from "./views/bip329.tsx";
 
 const system = new NostrSystem({});
 [
@@ -23,21 +24,25 @@ const routes = createBrowserRouter([
     path: "",
     element: <App />,
     children: [
+      // {
+      //   path: "/",
+      //   element: <Upload />,
+      // },
+      // {
+      //   path: "/setup",
+      //   element: <Setup />,
+      // },
+      // {
+      //   path: "/admin",
+      //   element: <Admin />,
+      // },
+      // {
+      //   path: "/admin/user/:pubkey",
+      //   element: <UserScope />,
+      // },
       {
         path: "/",
-        element: <Upload />,
-      },
-      {
-        path: "/setup",
-        element: <Setup />,
-      },
-      {
-        path: "/admin",
-        element: <Admin />,
-      },
-      {
-        path: "/admin/user/:pubkey",
-        element: <UserScope />,
+        element: <Bip329 />,
       },
     ],
   },

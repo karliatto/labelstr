@@ -46,3 +46,5 @@ export function FormatBytes(b: number, f?: number) {
 
 export const ServerUrl =
   import.meta.env.VITE_API_URL || `${location.protocol}//${location.host}`;
+
+console.log('ServerUrl', ServerUrl);
